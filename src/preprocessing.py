@@ -66,7 +66,7 @@ def pipeline_log():
 
 
 def get_preprocessing_pipeline():
-    return ColumnTransformer([
+    transformer = ColumnTransformer([
         ("bedroom", pipeline_add_ratio(), ["total_bedrooms", "total_rooms"]),
         ("people_per_house", pipeline_add_ratio(), ["population", "households"]),
         ("rooms_per_house", pipeline_add_ratio(), ["total_rooms", "households"]),
@@ -74,6 +74,8 @@ def get_preprocessing_pipeline():
         ("geo", ClassSimilarity(), ["latitude", "longitude"]),
         ("category", pipeline_category(), make_column_selector(dtype_include=object)),
     ], remainder=get_default_num_pipeline())
+
+    return transformer
 
 
 if __name__ == "__main__":

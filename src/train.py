@@ -9,6 +9,8 @@ from tqdm import tqdm
 from sklearn import metrics
 import joblib
 import preprocessing
+from sklearn.feature_selection import SelectFromModel
+from sklearn.pipeline import make_pipeline
 
 
 def display_scores(scores):
@@ -29,21 +31,31 @@ def get_X(df, should_fit, pipeline):
     return res
 
 
-def train(fold_name, model, df_train, df_valid):
+def train(fold_name, model, df_train, df_valid, select_from_model):
     model = get_model(model)
+
     df_train = df_train.dropna()
     feature_pipeline = preprocessing.get_preprocessing_pipeline()
+
     y_train = get_y(df_train)
     X_train = get_X(df_train, should_fit=True, pipeline=feature_pipeline)
 
-    df_valid = df_valid.dropna()
     y_valid = get_y(df_valid)
     X_valid = get_X(df_valid, should_fit=False, pipeline=feature_pipeline)
 
+    if select_from_model:
+        model_selector = SelectFromModel(model)
+        X_train = model_selector.fit_transform(X_train, y_train)
+        X_valid = model_selector.transform(X_valid)
+
     model.fit(X_train, y_train)
+
     preds = model.predict(X_valid)
     rmse = metrics.mean_squared_error(y_valid, preds, squared=False)
     print(f"Fold={fold_name}, RMSE={rmse}")
+
+    if select_from_model:
+        print(f"Model Selector Estimator Thresholds: {model_selector.threshold_}")
 
     joblib.dump(
         model,
@@ -55,6 +67,7 @@ def train(fold_name, model, df_train, df_valid):
 def main(args):
     df = pd.read_csv(args.path)
     model = args.model
+    select_from_model = args.select_from_model
 
     if args.fold_mode == "manual":
         scores = []
@@ -62,7 +75,7 @@ def main(args):
         for kfold in tqdm(df["kfold"].unique()):
             df_train = df[df.kfold != kfold].reset_index(drop=True)
             df_valid = df[df.kfold == kfold].reset_index(drop=True)
-            score = train(kfold, model, df_train, df_valid)
+            score = train(kfold, model, df_train, df_valid, select_from_model)
             scores.append(score)
         print("Printing final scores...")
         display_scores(scores)
@@ -92,6 +105,10 @@ if __name__ == "__main__":
         "--fold_mode",
         type=str,
         default="manual"
+    ),
+    parser.add_argument(
+        "--select_from_model",
+        action="store_true"
     )
 
     args = parser.parse_args()
