@@ -25,7 +25,7 @@ def get_X(df, should_fit, pipeline):
         res = pipeline.fit_transform(df)
     else:
         res = pipeline.transform(df)
-    print(f"Features after preprocessing: {pipeline.get_feature_names_out()}")
+    # print(f"Features after preprocessing: {pipeline.get_feature_names_out()}")
     return res
 
 
