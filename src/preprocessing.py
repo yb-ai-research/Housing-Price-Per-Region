@@ -1,6 +1,7 @@
 from sklearn.pipeline import make_pipeline
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin, MetaEstimatorMixin
 from sklearn.cluster import KMeans
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn import impute
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer, make_column_selector
@@ -26,6 +27,28 @@ class ClassSimilarity(BaseEstimator, TransformerMixin):
     def get_feature_names_out(self, names=None):
         return [f"Cluster {i} Similarity" for i in range(self.n_clusters)]
 
+
+class MedianNeighborPrices(MetaEstimatorMixin, BaseEstimator, TransformerMixin):
+    def __init__(self, n_neighbors=5, p=2, weights="auto"):
+        self.n_neighbors = n_neighbors
+        self.p = p
+        self.weights = weights
+        self.regressor = None
+
+    def fit(self, X, y=None, sample_weight=None):
+        self.regressor = KNeighborsRegressor(
+            n_neighbors = self.n_neighbors,
+            p = self.p,
+            weights = self.weights
+        )
+        self.regressor.fit(X, y)
+        return self
+
+    def transform(self, X):
+        return np.median(self.regressor.kneighbors(X))
+
+    def get_feature_names_out(self, names=None):
+        return [f"Median of {self.n_neighbors} Neighbors"]
 
 def column_ratio(X):
     return X[:, [0]] / X[:, [1]]
@@ -72,6 +95,7 @@ def get_preprocessing_pipeline():
         ("rooms_per_house", pipeline_add_ratio(), ["total_rooms", "households"]),
         ("log", pipeline_log(), ["total_bedrooms", "total_rooms", "population", "households", "median_income"]),
         ("geo", ClassSimilarity(), ["latitude", "longitude"]),
+        ("neighbor_median", MedianNeighborPrices()),
         ("category", pipeline_category(), make_column_selector(dtype_include=object)),
     ], remainder=get_default_num_pipeline())
 
