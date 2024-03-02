@@ -95,7 +95,7 @@ def get_preprocessing_pipeline():
         ("rooms_per_house", pipeline_add_ratio(), ["total_rooms", "households"]),
         ("log", pipeline_log(), ["total_bedrooms", "total_rooms", "population", "households", "median_income"]),
         ("geo", ClassSimilarity(), ["latitude", "longitude"]),
-        ("neighbor_median", MedianNeighborPrices()),
+        # ("neighbor_median", MedianNeighborPrices()),
         ("category", pipeline_category(), make_column_selector(dtype_include=object)),
     ], remainder=get_default_num_pipeline())
 
